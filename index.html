@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FuelPulse AU — Live Fuel Prices Near You</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><circle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%23E8792F%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-frame">
+  <div class="sheet">
+
+    <!-- ================= NAV ================= -->
+    <header class="navbar">
+      <a href="index.html" class="brand"><span class="dot"></span> FuelPulse AU</a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="results.html?fuel=U91" class="active">Unleaded</a></li>
+          <li><a href="results.html?fuel=E10">E10</a></li>
+          <li><a href="results.html?fuel=DL">Diesel</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#cities">Cities</a></li>
+        </ul>
+      </nav>
+      <div class="nav-right">
+        <span class="pill">AUD ▾</span>
+        <span class="pill">EN ▾</span>
+        <a href="#" class="btn-outline">Set price alert</a>
+      </div>
+    </header>
+
+    <!-- ================= HERO ================= -->
+    <section class="hero">
+      <div class="hero-illustration" aria-hidden="true">
+        <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#F3A85C"/>
+              <stop offset="42%" stop-color="#E8792F"/>
+              <stop offset="75%" stop-color="#8A4B32"/>
+              <stop offset="100%" stop-color="#123832"/>
+            </linearGradient>
+            <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#FFE3B0"/>
+              <stop offset="60%" stop-color="#F6B26B"/>
+              <stop offset="100%" stop-color="#F6B26B" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2C5A50"/>
+              <stop offset="100%" stop-color="#1B4B43"/>
+            </linearGradient>
+            <linearGradient id="hillNear" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#163832"/>
+              <stop offset="100%" stop-color="#0E2E2A"/>
+            </linearGradient>
+            <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2A2521"/>
+              <stop offset="100%" stop-color="#100E0C"/>
+            </linearGradient>
+          </defs>
+
+          <rect width="1600" height="900" fill="url(#sky)"/>
+          <circle cx="1180" cy="300" r="260" fill="url(#sun)"/>
+          <circle cx="1180" cy="300" r="92" fill="#FFEAC4"/>
+
+          <!-- clouds -->
+          <g opacity="0.35" fill="#FBF6EE">
+            <ellipse cx="260" cy="150" rx="90" ry="18"/>
+            <ellipse cx="330" cy="140" rx="60" ry="14"/>
+            <ellipse cx="760" cy="110" rx="70" ry="14"/>
+          </g>
+
+          <!-- far hills -->
+          <path d="M0,560 C220,470 420,520 620,470 C860,410 1050,480 1260,440 C1400,415 1520,450 1600,430 L1600,900 L0,900 Z" fill="url(#hillFar)" opacity="0.85"/>
+          <!-- near hills -->
+          <path d="M0,650 C180,580 360,640 560,600 C780,555 980,630 1220,590 C1380,565 1500,605 1600,585 L1600,900 L0,900 Z" fill="url(#hillNear)"/>
+
+          <!-- road -->
+          <path d="M560,900 L740,610 L860,610 L1080,900 Z" fill="url(#road)"/>
+          <path d="M792,640 L780,900" stroke="#F3A85C" stroke-width="6" stroke-dasharray="26 22" opacity="0.75"/>
+
+          <!-- fuel pump silhouette -->
+          <g transform="translate(210,560)" fill="#0E2E2A">
+            <rect x="0" y="30" width="70" height="150" rx="10"/>
+            <rect x="12" y="0" width="46" height="34" rx="6"/>
+            <rect x="20" y="55" width="30" height="60" rx="4" fill="#F3A85C" opacity="0.9"/>
+            <path d="M70,60 C110,60 110,90 110,110 L110,190 C110,205 122,205 122,190 L122,120" stroke="#0E2E2A" stroke-width="9" fill="none" stroke-linecap="round"/>
+          </g>
+
+          <!-- second pump, far right, smaller -->
+          <g transform="translate(1330,600) scale(0.7)" fill="#0E2E2A" opacity="0.9">
+            <rect x="0" y="30" width="70" height="150" rx="10"/>
+            <rect x="12" y="0" width="46" height="34" rx="6"/>
+            <rect x="20" y="55" width="30" height="60" rx="4" fill="#F3A85C" opacity="0.9"/>
+          </g>
+
+          <!-- car silhouette on road -->
+          <g transform="translate(870,790)" fill="#0E2E2A">
+            <rect x="0" y="10" width="120" height="28" rx="10"/>
+            <path d="M14,10 L34,-14 L92,-14 L110,10 Z"/>
+            <circle cx="24" cy="40" r="14"/>
+            <circle cx="96" cy="40" r="14"/>
+          </g>
+        </svg>
+      </div>
+      <div class="hero-scrim"></div>
+
+      <div class="hero-callout">
+        <p>What's the cheapest E10 near me right now?</p>
+        <span class="arrow">→</span>
+      </div>
+
+      <h1 class="hero-headline">It's time to fuel up <em>smarter</em><span class="star">*</span></h1>
+      <p class="hero-sub">Real-time diesel, unleaded and E10 prices from servos across every major Australian city — compared in seconds, so you never overpay at the pump.</p>
+
+      <form class="search-card" id="fuel-search" action="results.html" method="get">
+        <div class="search-grid">
+          <div class="field autocomplete">
+            <label for="city">Destination</label>
+            <input type="text" id="city" name="city" placeholder="City, suburb or postcode" autocomplete="off" required>
+            <div class="autocomplete-list" id="city-list"></div>
+          </div>
+          <div class="field select-field">
+            <label for="fuel">Fuel type</label>
+            <select id="fuel" name="fuel">
+              <option value="U91">Unleaded 91</option>
+              <option value="P95">Premium 95</option>
+              <option value="P98">Premium 98</option>
+              <option value="E10">E10</option>
+              <option value="DL">Diesel</option>
+            </select>
+          </div>
+          <div class="field select-field">
+            <label for="radius">Search radius</label>
+            <select id="radius" name="radius">
+              <option value="5">Within 5 km</option>
+              <option value="10" selected>Within 10 km</option>
+              <option value="20">Within 20 km</option>
+              <option value="50">Within 50 km</option>
+            </select>
+          </div>
+          <div class="search-submit">
+            <button type="submit" class="btn-search">
+              Search prices
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="search-meta">
+          <input type="checkbox" id="cheapest-first" name="cheapest_first" checked>
+          <label for="cheapest-first">Show cheapest stations first</label>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= HIGHLIGHT CARDS ================= -->
+    <section class="highlights">
+      <a class="hcard" href="results.html?city=Sydney&fuel=U91">
+        <div class="swatch sydney">🏙️</div>
+        <div class="info">
+          <div class="rate">▼ 3¢ this week</div>
+          <h4>Sydney, NSW</h4>
+          <p>Unleaded 91 from <strong>$1.72</strong>/L</p>
+        </div>
+        <div class="go">→</div>
+      </a>
+      <a class="hcard" href="results.html?city=Melbourne&fuel=DL">
+        <div class="swatch melbourne">🌉</div>
+        <div class="info">
+          <div class="rate">▲ 1¢ this week</div>
+          <h4>Melbourne, VIC</h4>
+          <p>Diesel from <strong>$1.79</strong>/L</p>
+        </div>
+        <div class="go">→</div>
+      </a>
+      <a class="hcard" href="results.html?city=Brisbane&fuel=E10">
+        <div class="swatch brisbane">🌴</div>
+        <div class="info">
+          <div class="rate">▼ 5¢ this week</div>
+          <h4>Brisbane, QLD</h4>
+          <p>E10 from <strong>$1.64</strong>/L</p>
+        </div>
+        <div class="go">→</div>
+      </a>
+    </section>
+
+    <!-- ================= HOW IT WORKS ================= -->
+    <section class="section" id="how-it-works">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Three steps to your <em>cheapest tank</em> yet</h2>
+        <p>FuelPulse pulls live pricing from servo networks and independents across the country, so the price you see is the price you pay.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <h3>Enter your city</h3>
+          <p>Type any Australian city, suburb or postcode into the search bar above.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <h3>Pick your fuel</h3>
+          <p>Choose Unleaded 91, Premium, E10 or Diesel — we track them all, separately.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <h3>Compare &amp; go</h3>
+          <p>See every nearby station ranked by price, distance and how recently it updated.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= STATS ================= -->
+    <section class="section" style="padding-top:0;">
+      <div class="stat-bar">
+        <div class="stat">
+          <h3>4,200+</h3>
+          <p>Stations tracked nationwide</p>
+        </div>
+        <div class="stat">
+          <h3>15 min</h3>
+          <p>Average price refresh rate</p>
+        </div>
+        <div class="stat">
+          <h3>28</h3>
+          <p>Major cities &amp; regions covered</p>
+        </div>
+        <div class="stat">
+          <h3>$310</h3>
+          <p>Avg. yearly savings per driver</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CITIES ================= -->
+    <section class="section" id="cities">
+      <div class="section-head">
+        <span class="eyebrow">Popular destinations</span>
+        <h2>Check prices in your <em>city</em></h2>
+      </div>
+      <div class="city-grid">
+        <a class="city-chip" href="results.html?city=Sydney">Sydney<small>NSW</small></a>
+        <a class="city-chip" href="results.html?city=Melbourne">Melbourne<small>VIC</small></a>
+        <a class="city-chip" href="results.html?city=Brisbane">Brisbane<small>QLD</small></a>
+        <a class="city-chip" href="results.html?city=Perth">Perth<small>WA</small></a>
+        <a class="city-chip" href="results.html?city=Adelaide">Adelaide<small>SA</small></a>
+        <a class="city-chip" href="results.html?city=Canberra">Canberra<small>ACT</small></a>
+        <a class="city-chip" href="results.html?city=Hobart">Hobart<small>TAS</small></a>
+        <a class="city-chip" href="results.html?city=Darwin">Darwin<small>NT</small></a>
+        <a class="city-chip" href="results.html?city=Gold Coast">Gold Coast<small>QLD</small></a>
+        <a class="city-chip" href="results.html?city=Newcastle">Newcastle<small>NSW</small></a>
+      </div>
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+      <div class="footer-top">
+        <div>
+          <a href="index.html" class="brand"><span class="dot"></span> FuelPulse AU</a>
+          <p>Independent live fuel price comparison for Australian drivers. Prices are indicative and sourced from participating stations and public fuel-pricing schemes.</p>
+        </div>
+        <div class="footer-cols">
+          <div class="footer-col">
+            <h5>Fuel types</h5>
+            <a href="results.html?fuel=U91">Unleaded 91</a>
+            <a href="results.html?fuel=E10">E10</a>
+            <a href="results.html?fuel=DL">Diesel</a>
+          </div>
+          <div class="footer-col">
+            <h5>Company</h5>
+            <a href="#how-it-works">How it works</a>
+            <a href="#cities">Cities covered</a>
+            <a href="#">Data sources</a>
+          </div>
+          <div class="footer-col">
+            <h5>Support</h5>
+            <a href="#">Help centre</a>
+            <a href="#">Report a price</a>
+            <a href="#">Contact us</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 FuelPulse AU. All prices in AUD, cents per litre.</span>
+        <span>Made for drivers, not refineries.</span>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

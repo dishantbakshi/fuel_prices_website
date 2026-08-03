@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Fuel Prices — FuelPulse AU</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><circle cx=%2216%22 cy=%2216%22 r=%2216%22 fill=%22%23E8792F%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-frame">
+  <div class="sheet" id="results-app">
+
+    <!-- ================= NAV ================= -->
+    <header class="navbar">
+      <a href="index.html" class="brand"><span class="dot"></span> FuelPulse AU</a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="results.html?fuel=U91">Unleaded</a></li>
+          <li><a href="results.html?fuel=E10">E10</a></li>
+          <li><a href="results.html?fuel=DL">Diesel</a></li>
+          <li><a href="index.html#how-it-works">How it works</a></li>
+          <li><a href="index.html#cities">Cities</a></li>
+        </ul>
+      </nav>
+      <div class="nav-right">
+        <span class="pill">AUD ▾</span>
+        <span class="pill">EN ▾</span>
+        <a href="#" class="btn-outline">Set price alert</a>
+      </div>
+    </header>
+
+    <!-- ================= RESULTS HEADER + SEARCH ================= -->
+    <section class="results-top">
+      <div class="results-heading">
+        <span class="eyebrow">Live prices</span>
+        <h1><em id="heading-city">Sydney</em> · <span id="heading-state">NSW</span></h1>
+      </div>
+
+      <form class="results-searchbar" id="results-search-form" action="results.html" method="get">
+        <div class="field autocomplete">
+          <label for="results-city-input">Destination</label>
+          <input type="text" id="results-city-input" name="city" placeholder="City, suburb or postcode" autocomplete="off" required>
+          <div class="autocomplete-list" id="results-city-list"></div>
+        </div>
+        <div class="field select-field">
+          <label for="results-fuel-select">Fuel type</label>
+          <select id="results-fuel-select" name="fuel">
+            <option value="U91">Unleaded 91</option>
+            <option value="P95">Premium 95</option>
+            <option value="P98">Premium 98</option>
+            <option value="E10">E10</option>
+            <option value="DL">Diesel</option>
+          </select>
+        </div>
+        <div class="field select-field">
+          <label for="results-radius">Radius</label>
+          <select id="results-radius" name="radius">
+            <option value="5">Within 5 km</option>
+            <option value="10" selected>Within 10 km</option>
+            <option value="20">Within 20 km</option>
+            <option value="50">Within 50 km</option>
+          </select>
+        </div>
+        <div class="search-submit">
+          <button type="submit" class="btn-search">
+            Search
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= RESULTS BODY ================= -->
+    <section class="results-body">
+
+      <aside class="filters">
+        <div class="filter-group">
+          <h4>Fuel type</h4>
+          <div class="fuel-tabs" id="fuel-tabs"></div>
+        </div>
+        <div class="filter-group">
+          <h4>Sort by</h4>
+          <select class="sort-select" id="sort-select">
+            <option value="price">Lowest price first</option>
+            <option value="distance">Closest first</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <h4>Brands</h4>
+          <div id="brand-filters"></div>
+        </div>
+      </aside>
+
+      <div>
+        <div class="results-list-head">
+          <h3>Nearby stations</h3>
+          <span id="results-count">Loading…</span>
+        </div>
+        <div class="station-list" id="station-list"></div>
+      </div>
+
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+      <div class="footer-top">
+        <div>
+          <a href="index.html" class="brand"><span class="dot"></span> FuelPulse AU</a>
+          <p>Independent live fuel price comparison for Australian drivers. Prices are indicative and sourced from participating stations and public fuel-pricing schemes.</p>
+        </div>
+        <div class="footer-cols">
+          <div class="footer-col">
+            <h5>Fuel types</h5>
+            <a href="results.html?fuel=U91">Unleaded 91</a>
+            <a href="results.html?fuel=E10">E10</a>
+            <a href="results.html?fuel=DL">Diesel</a>
+          </div>
+          <div class="footer-col">
+            <h5>Company</h5>
+            <a href="index.html#how-it-works">How it works</a>
+            <a href="index.html#cities">Cities covered</a>
+            <a href="#">Data sources</a>
+          </div>
+          <div class="footer-col">
+            <h5>Support</h5>
+            <a href="#">Help centre</a>
+            <a href="#">Report a price</a>
+            <a href="#">Contact us</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 FuelPulse AU. All prices in AUD, cents per litre.</span>
+        <span>Made for drivers, not refineries.</span>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
