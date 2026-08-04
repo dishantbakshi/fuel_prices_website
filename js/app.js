@@ -104,9 +104,79 @@ function generateStations(city) {
   return stations;
 }
 
-function fetchStations(city) {
-  // Demo data generator — swap for a real live-price API call.
-  return generateStations(city || "Sydney");
+const NSW_FUEL_ENDPOINT = "/.netlify/functions/nsw-fuel-prices";
+
+// FuelCheck's fuel-type codes have drifted a little across API versions;
+// normalise the common variants onto the codes this UI uses.
+const FUEL_CODE_ALIASES = {
+  U91: ["U91", "ULP"],
+  E10: ["E10"],
+  P95: ["P95", "U95", "PULP95"],
+  P98: ["P98", "U98", "PULP98"],
+  DL: ["DL", "DIESEL", "PDL"],
+};
+function normalizeFuelCode(raw) {
+  const upper = String(raw).toUpperCase().replace(/\s+/g, "");
+  for (const [key, aliases] of Object.entries(FUEL_CODE_ALIASES)) {
+    if (aliases.includes(upper)) return key;
+  }
+  return upper;
+}
+
+function brandVisual(rawBrand) {
+  const name = (rawBrand || "Independent").trim();
+  const known = BRANDS.find((b) => name.toLowerCase().includes(b.name.split(" ")[0].toLowerCase()));
+  if (known) return { short: known.short, color: known.color, brand: known.name };
+  const palette = [
+    "linear-gradient(160deg,#5C564C,#241F19)",
+    "linear-gradient(160deg,#256257,#123832)",
+    "linear-gradient(160deg,#C1602A,#8F3E1D)",
+  ];
+  return { short: name.slice(0, 2).toUpperCase(), color: palette[hashStr(name) % palette.length], brand: name };
+}
+
+async function fetchRealNswStations(city) {
+  const res = await fetch(`${NSW_FUEL_ENDPOINT}?city=${encodeURIComponent(city)}`);
+  if (!res.ok) throw new Error(`nsw_fuel_http_${res.status}`);
+  const data = await res.json();
+  if (!data.available || !data.stations || !data.stations.length) return null;
+
+  const stations = data.stations
+    .map((s, i) => {
+      const visual = brandVisual(s.brand);
+      const prices = {};
+      let bestUpdatedMin = null;
+      Object.entries(s.prices || {}).forEach(([code, entry]) => {
+        prices[normalizeFuelCode(code)] = entry.price;
+        if (entry.updatedMin != null && (bestUpdatedMin == null || entry.updatedMin < bestUpdatedMin)) {
+          bestUpdatedMin = entry.updatedMin;
+        }
+      });
+      return {
+        id: `nsw-${s.code || i}`,
+        brand: visual.brand,
+        short: visual.short,
+        color: visual.color,
+        address: s.address,
+        distance: null,
+        updatedMin: bestUpdatedMin,
+        prices,
+      };
+    })
+    .filter((s) => Object.keys(s.prices).length);
+
+  return stations.length ? stations : null;
+}
+
+async function fetchStations(city) {
+  const target = city || "Sydney";
+  try {
+    const real = await fetchRealNswStations(target);
+    if (real) return { source: "nsw-fuelcheck", stations: real };
+  } catch (err) {
+    console.warn("NSW FuelCheck lookup failed, falling back to demo data:", err);
+  }
+  return { source: "demo", stations: generateStations(target) };
 }
 
 /* ---------------------------------------------------------
@@ -171,7 +241,7 @@ function initHomePage() {
 /* ---------------------------------------------------------
    Results page wiring
    --------------------------------------------------------- */
-function initResultsPage() {
+async function initResultsPage() {
   const root = document.getElementById("results-app");
   if (!root) return;
 
@@ -191,7 +261,26 @@ function initResultsPage() {
   document.getElementById("heading-city").textContent = cityLabel;
   document.getElementById("heading-state").textContent = stateLabel;
 
-  const stations = fetchStations(cityLabel);
+  const dataSourceEl = document.getElementById("data-source");
+  if (dataSourceEl) dataSourceEl.innerHTML = `<span class="live-dot"></span> Loading live prices…`;
+  document.getElementById("station-list").innerHTML = `<div class="empty-state"><h3>Loading live prices…</h3><p>Checking NSW FuelCheck for stations near ${cityLabel}.</p></div>`;
+
+  const initial = await fetchStations(cityLabel);
+  let dataSource = initial.source;
+  const stations = initial.stations;
+
+  function renderDataSourceBadge() {
+    if (!dataSourceEl) return;
+    if (dataSource === "nsw-fuelcheck") {
+      dataSourceEl.className = "data-source live";
+      dataSourceEl.innerHTML = `<span class="live-dot"></span> Live prices from NSW FuelCheck`;
+    } else {
+      dataSourceEl.className = "data-source demo";
+      dataSourceEl.innerHTML = `<span class="live-dot demo"></span> Estimated demo prices — no live NSW FuelCheck data for this search`;
+    }
+  }
+  renderDataSourceBadge();
+
   const allBrands = [...new Set(stations.map((s) => s.brand))];
 
   const brandFiltersEl = document.getElementById("brand-filters");
@@ -209,19 +298,23 @@ function initResultsPage() {
   function fuelTabsMarkup() {
     return Object.keys(FUEL_LABELS)
       .map((f) => {
-        const cheapest = Math.min(...stations.map((s) => s.prices[f]));
+        const vals = stations.map((s) => s.prices[f]).filter((v) => v != null);
+        const cheapest = vals.length ? Math.min(...vals) : null;
         return `<button type="button" data-fuel-tab="${f}" class="${f === fuel ? "active" : ""}">
-          ${FUEL_LABELS[f]} <span class="price">$${cheapest.toFixed(2)}</span>
+          ${FUEL_LABELS[f]} <span class="price">${cheapest != null ? "$" + cheapest.toFixed(2) : "—"}</span>
         </button>`;
       })
       .join("");
   }
 
   function render() {
-    const filtered = stations.filter((s) => brandFilter.has(s.brand));
-    const sorted = [...filtered].sort((a, b) =>
-      sort === "price" ? a.prices[fuel] - b.prices[fuel] : a.distance - b.distance
-    );
+    const filtered = stations.filter((s) => brandFilter.has(s.brand) && s.prices[fuel] != null);
+    const sorted = [...filtered].sort((a, b) => {
+      if (sort === "distance" && a.distance != null && b.distance != null) {
+        return a.distance - b.distance;
+      }
+      return a.prices[fuel] - b.prices[fuel];
+    });
     const cheapestPrice = sorted.length ? Math.min(...sorted.map((s) => s.prices[fuel])) : null;
 
     document.getElementById("fuel-tabs").innerHTML = fuelTabsMarkup();
@@ -238,14 +331,16 @@ function initResultsPage() {
       .map((s) => {
         const price = s.prices[fuel];
         const isCheapest = price === cheapestPrice;
+        const distanceBit = s.distance != null ? `${s.distance} km away · ` : "";
+        const updatedBit = s.updatedMin != null ? `Updated ${s.updatedMin} min ago` : "Recently updated";
         return `
         <div class="station-card">
           <div class="brand-badge" style="background:${s.color}">${s.short}</div>
           <div class="station-info">
             <h4>${s.brand}</h4>
-            <div class="addr">${s.address} · ${s.distance} km away</div>
+            <div class="addr">${distanceBit}${s.address}</div>
             <div class="meta">
-              <span class="updated"><span class="live-dot"></span> Updated ${s.updatedMin} min ago</span>
+              <span class="updated"><span class="live-dot"></span> ${updatedBit}</span>
             </div>
           </div>
           <div class="price-block ${isCheapest ? "cheapest" : ""}">
@@ -289,17 +384,33 @@ function initResultsPage() {
 
   wireAutocomplete(document.getElementById("results-city-input"), document.getElementById("results-city-list"));
 
-  // Gentle "live" price nudges so the page feels like it's tracking real-time data.
-  setInterval(() => {
-    stations.forEach((s) => {
-      Object.keys(s.prices).forEach((f) => {
-        const nudge = (Math.random() - 0.5) * 0.01;
-        s.prices[f] = Math.max(1.3, +(s.prices[f] + nudge).toFixed(2));
+  if (dataSource === "nsw-fuelcheck") {
+    // Real data: periodically re-pull from NSW FuelCheck rather than faking movement.
+    setInterval(async () => {
+      try {
+        const fresh = await fetchStations(cityLabel);
+        if (fresh.source === "nsw-fuelcheck" && fresh.stations.length) {
+          stations.length = 0;
+          stations.push(...fresh.stations);
+          render();
+        }
+      } catch (err) {
+        console.warn("NSW FuelCheck refresh failed:", err);
+      }
+    }, 5 * 60 * 1000);
+  } else {
+    // Demo data: gentle nudges so the page still feels alive.
+    setInterval(() => {
+      stations.forEach((s) => {
+        Object.keys(s.prices).forEach((f) => {
+          const nudge = (Math.random() - 0.5) * 0.01;
+          s.prices[f] = Math.max(1.3, +(s.prices[f] + nudge).toFixed(2));
+        });
+        s.updatedMin = Math.random() < 0.3 ? 0 : s.updatedMin;
       });
-      s.updatedMin = Math.random() < 0.3 ? 0 : s.updatedMin;
-    });
-    render();
-  }, 12000);
+      render();
+    }, 12000);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
