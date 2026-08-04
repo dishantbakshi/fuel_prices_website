@@ -6,27 +6,37 @@
    ========================================================= */
 
 const AU_CITIES = [
-  { name: "Sydney", state: "NSW" },
-  { name: "Melbourne", state: "VIC" },
-  { name: "Brisbane", state: "QLD" },
-  { name: "Perth", state: "WA" },
-  { name: "Adelaide", state: "SA" },
-  { name: "Canberra", state: "ACT" },
-  { name: "Hobart", state: "TAS" },
-  { name: "Darwin", state: "NT" },
-  { name: "Gold Coast", state: "QLD" },
-  { name: "Newcastle", state: "NSW" },
-  { name: "Wollongong", state: "NSW" },
-  { name: "Geelong", state: "VIC" },
-  { name: "Sunshine Coast", state: "QLD" },
-  { name: "Cairns", state: "QLD" },
-  { name: "Townsville", state: "QLD" },
-  { name: "Toowoomba", state: "QLD" },
-  { name: "Ballarat", state: "VIC" },
-  { name: "Bendigo", state: "VIC" },
-  { name: "Launceston", state: "TAS" },
-  { name: "Alice Springs", state: "NT" },
+  { name: "Sydney", state: "NSW", lat: -33.8688, lng: 151.2093 },
+  { name: "Melbourne", state: "VIC", lat: -37.8136, lng: 144.9631 },
+  { name: "Brisbane", state: "QLD", lat: -27.4698, lng: 153.0251 },
+  { name: "Perth", state: "WA", lat: -31.9505, lng: 115.8605 },
+  { name: "Adelaide", state: "SA", lat: -34.9285, lng: 138.6007 },
+  { name: "Canberra", state: "ACT", lat: -35.2809, lng: 149.13 },
+  { name: "Hobart", state: "TAS", lat: -42.8821, lng: 147.3272 },
+  { name: "Darwin", state: "NT", lat: -12.4634, lng: 130.8456 },
+  { name: "Gold Coast", state: "QLD", lat: -28.0167, lng: 153.4 },
+  { name: "Newcastle", state: "NSW", lat: -32.9283, lng: 151.7817 },
+  { name: "Wollongong", state: "NSW", lat: -34.4278, lng: 150.8931 },
+  { name: "Geelong", state: "VIC", lat: -38.1499, lng: 144.3617 },
+  { name: "Sunshine Coast", state: "QLD", lat: -26.65, lng: 153.0667 },
+  { name: "Cairns", state: "QLD", lat: -16.9186, lng: 145.7781 },
+  { name: "Townsville", state: "QLD", lat: -19.259, lng: 146.8169 },
+  { name: "Toowoomba", state: "QLD", lat: -27.5598, lng: 151.9507 },
+  { name: "Ballarat", state: "VIC", lat: -37.5622, lng: 143.8503 },
+  { name: "Bendigo", state: "VIC", lat: -36.757, lng: 144.2794 },
+  { name: "Launceston", state: "TAS", lat: -41.4332, lng: 147.1441 },
+  { name: "Alice Springs", state: "NT", lat: -23.698, lng: 133.8807 },
 ];
+
+function haversineKm(a, b) {
+  if (!a || !b || a.lat == null || a.lng == null || b.lat == null || b.lng == null) return null;
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const s1 = Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(s1)) * 10) / 10;
+}
 
 const FUEL_LABELS = {
   U91: "Unleaded 91",
@@ -74,7 +84,7 @@ function basePriceFor(fuel) {
   }
 }
 
-function generateStations(city) {
+function generateStations(city, center) {
   const rand = seededRandom(hashStr(city.toLowerCase()));
   const count = 6 + Math.floor(rand() * 4); // 6-9 stations
   const stations = [];
@@ -82,8 +92,10 @@ function generateStations(city) {
     const brand = BRANDS[Math.floor(rand() * BRANDS.length)];
     const street = STREET_NAMES[Math.floor(rand() * STREET_NAMES.length)];
     const num = 4 + Math.floor(rand() * 380);
-    const distance = Math.round((0.4 + rand() * 12) * 10) / 10;
     const updatedMin = Math.floor(rand() * 55) + 1;
+    // Scatter within ~12km of the city centre so the map looks plausible.
+    const lat = center.lat + (rand() - 0.5) * 0.22;
+    const lng = center.lng + (rand() - 0.5) * 0.22;
     const prices = {};
     Object.keys(FUEL_LABELS).forEach((fuel) => {
       const base = basePriceFor(fuel);
@@ -96,7 +108,8 @@ function generateStations(city) {
       short: brand.short,
       color: brand.color,
       address: `${num} ${street}, ${city}`,
-      distance,
+      lat,
+      lng,
       updatedMin,
       prices,
     });
@@ -158,7 +171,8 @@ async function fetchRealNswStations(city) {
         short: visual.short,
         color: visual.color,
         address: s.address,
-        distance: null,
+        lat: s.latitude != null ? Number(s.latitude) : null,
+        lng: s.longitude != null ? Number(s.longitude) : null,
         updatedMin: bestUpdatedMin,
         prices,
       };
@@ -168,15 +182,33 @@ async function fetchRealNswStations(city) {
   return stations.length ? stations : null;
 }
 
+function resolveCityCenter(city) {
+  const match = AU_CITIES.find((c) => c.name.toLowerCase() === city.toLowerCase());
+  if (match) return { lat: match.lat, lng: match.lng };
+  return { lat: -33.8688, lng: 151.2093 }; // unknown search text: default to Sydney
+}
+
 async function fetchStations(city) {
   const target = city || "Sydney";
+  const center = resolveCityCenter(target);
   try {
     const real = await fetchRealNswStations(target);
-    if (real) return { source: "nsw-fuelcheck", stations: real };
+    if (real) {
+      // A handful of FuelCheck stations ship without coordinates; fall back
+      // to a jittered point near the city centre so they still plot on the map.
+      const rand = seededRandom(hashStr(target.toLowerCase()));
+      real.forEach((s) => {
+        if (s.lat == null || s.lng == null) {
+          s.lat = center.lat + (rand() - 0.5) * 0.18;
+          s.lng = center.lng + (rand() - 0.5) * 0.18;
+        }
+      });
+      return { source: "nsw-fuelcheck", stations: real, center };
+    }
   } catch (err) {
     console.warn("NSW FuelCheck lookup failed, falling back to demo data:", err);
   }
-  return { source: "demo", stations: generateStations(target) };
+  return { source: "demo", stations: generateStations(target, center), center };
 }
 
 /* ---------------------------------------------------------
@@ -239,6 +271,66 @@ function initHomePage() {
 }
 
 /* ---------------------------------------------------------
+   Station map (Leaflet + OpenStreetMap tiles — no API key)
+   --------------------------------------------------------- */
+function pinIcon(color, size) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(20,15,10,.4)"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+const STATION_ICON = pinIcon("#E8792F", 16);
+const STATION_ICON_BEST = pinIcon("#C1502E", 20);
+const USER_ICON = pinIcon("#2E7DD1", 14);
+
+function initStationMap(center) {
+  const el = document.getElementById("station-map");
+  if (!el || typeof L === "undefined") return null;
+
+  const map = L.map(el, { scrollWheelZoom: false }).setView([center.lat, center.lng], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    maxZoom: 18,
+  }).addTo(map);
+
+  return { map, stationLayer: L.layerGroup().addTo(map), userMarker: null };
+}
+
+function updateStationMap(mapState, sortedStations, fuel, cheapestPrice, refCoord, usingMyLocation) {
+  if (!mapState) return;
+  const { map, stationLayer } = mapState;
+  stationLayer.clearLayers();
+
+  const plottable = sortedStations.filter((s) => s.lat != null && s.lng != null);
+  plottable.forEach((s) => {
+    const isCheapest = s.prices[fuel] === cheapestPrice;
+    L.marker([s.lat, s.lng], { icon: isCheapest ? STATION_ICON_BEST : STATION_ICON })
+      .bindPopup(
+        `<strong>${s.brand}</strong><br>${s.address}<br>$${s.prices[fuel].toFixed(2)}/L ${FUEL_LABELS[fuel]}`
+      )
+      .addTo(stationLayer);
+  });
+
+  if (usingMyLocation && refCoord) {
+    if (mapState.userMarker) stationLayer.removeLayer(mapState.userMarker);
+    mapState.userMarker = L.marker([refCoord.lat, refCoord.lng], { icon: USER_ICON })
+      .bindPopup("You are here")
+      .addTo(stationLayer);
+  }
+
+  const points = plottable.map((s) => [s.lat, s.lng]);
+  if (usingMyLocation && refCoord) points.push([refCoord.lat, refCoord.lng]);
+  if (points.length) {
+    map.fitBounds(points, { padding: [30, 30], maxZoom: 14 });
+  } else {
+    map.setView([refCoord.lat, refCoord.lng], 12);
+  }
+  setTimeout(() => map.invalidateSize(), 0);
+}
+
+/* ---------------------------------------------------------
    Results page wiring
    --------------------------------------------------------- */
 async function initResultsPage() {
@@ -268,6 +360,10 @@ async function initResultsPage() {
   const initial = await fetchStations(cityLabel);
   let dataSource = initial.source;
   const stations = initial.stations;
+  let refCoord = initial.center;
+  let usingMyLocation = false;
+
+  const map = initStationMap(initial.center);
 
   function renderDataSourceBadge() {
     if (!dataSourceEl) return;
@@ -308,6 +404,8 @@ async function initResultsPage() {
   }
 
   function render() {
+    stations.forEach((s) => { s.distance = haversineKm(refCoord, s); });
+
     const filtered = stations.filter((s) => brandFilter.has(s.brand) && s.prices[fuel] != null);
     const sorted = [...filtered].sort((a, b) => {
       if (sort === "distance" && a.distance != null && b.distance != null) {
@@ -319,7 +417,9 @@ async function initResultsPage() {
 
     document.getElementById("fuel-tabs").innerHTML = fuelTabsMarkup();
     document.getElementById("results-count").textContent =
-      sorted.length ? `${sorted.length} stations found · ${FUEL_LABELS[fuel]}` : "No stations match your filters";
+      sorted.length ? `${sorted.length} stations found · ${FUEL_LABELS[fuel]}${usingMyLocation ? " · near you" : ""}` : "No stations match your filters";
+
+    updateStationMap(map, sorted, fuel, cheapestPrice, refCoord, usingMyLocation);
 
     const listEl = document.getElementById("station-list");
     if (!sorted.length) {
@@ -333,8 +433,11 @@ async function initResultsPage() {
         const isCheapest = price === cheapestPrice;
         const distanceBit = s.distance != null ? `${s.distance} km away · ` : "";
         const updatedBit = s.updatedMin != null ? `Updated ${s.updatedMin} min ago` : "Recently updated";
+        const mapsHref = s.lat != null && s.lng != null
+          ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}`;
         return `
-        <div class="station-card">
+        <div class="station-card" data-station-id="${s.id}">
           <div class="brand-badge" style="background:${s.color}">${s.short}</div>
           <div class="station-info">
             <h4>${s.brand}</h4>
@@ -348,7 +451,7 @@ async function initResultsPage() {
             <span class="amt">$${price.toFixed(2)}<sup>/L</sup></span>
             <div class="label">${FUEL_LABELS[fuel]}</div>
           </div>
-          <button class="directions-btn" type="button">Directions</button>
+          <a class="directions-btn" href="${mapsHref}" target="_blank" rel="noopener">Directions</a>
         </div>`;
       })
       .join("");
@@ -383,6 +486,31 @@ async function initResultsPage() {
   });
 
   wireAutocomplete(document.getElementById("results-city-input"), document.getElementById("results-city-list"));
+
+  const locateBtn = document.getElementById("locate-btn");
+  if (locateBtn && "geolocation" in navigator) {
+    locateBtn.addEventListener("click", () => {
+      locateBtn.disabled = true;
+      locateBtn.textContent = "Locating…";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          refCoord = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          usingMyLocation = true;
+          sort = "distance";
+          document.getElementById("sort-select").value = "distance";
+          locateBtn.textContent = "📍 Using your location";
+          render();
+        },
+        () => {
+          locateBtn.disabled = false;
+          locateBtn.textContent = "Use my location";
+          alert("Couldn't get your location — check your browser's location permission for this site.");
+        }
+      );
+    });
+  } else if (locateBtn) {
+    locateBtn.style.display = "none";
+  }
 
   if (dataSource === "nsw-fuelcheck") {
     // Real data: periodically re-pull from NSW FuelCheck rather than faking movement.
